@@ -1,0 +1,102 @@
+#!/usr/bin/env zsh
+
+# ale
+# update, upgrade, and cleanup homebrew
+# usage: ale
+ale() {
+	brew update
+	brew upgrade
+	brew cleanup
+}
+
+# mkzip
+# create a ZIP archive of a directory
+# usage: mkzip directory-name-here
+mkzip() {
+	zip -r "$1".zip "$1"
+}
+
+# extract
+# extract most know archives with one command
+# usage: extract archive-name-here.xxx
+extract() {
+	if [ -f $1 ] ; then
+		case $1 in
+			*.tar.bz2)   tar xjf $1     ;;
+			*.tar.gz)    tar xzf $1     ;;
+			*.bz2)       bunzip2 $1     ;;
+			*.rar)       unrar e $1     ;;
+			*.gz)        gunzip $1      ;;
+			*.tar)       tar xf $1      ;;
+			*.tbz2)      tar xjf $1     ;;
+			*.tgz)       tar xzf $1     ;;
+			*.zip)       unzip $1       ;;
+			*.Z)         uncompress $1  ;;
+			*.7z)        7z x $1        ;;
+			*)     echo "'$1' cannot be extracted via extract()" ;;
+		esac
+	else
+		echo "'$1' is not a valid file"
+	fi
+}
+
+# mkcd
+# make new directory and jump inside
+# usage: mkcd directory-name-here
+mkcd() {
+	mkdir -p "$1"
+	cd "$1"
+}
+
+# clean-ds
+# recursively delete .DS_Store files
+# usage: clean-ds
+clean-ds() {
+	find . -type f -name '*.DS_Store' -ls -delete
+}
+
+# batch-convert
+# batch conversion of files in working directory
+# $1: original file format extension (e.g., xxx)
+# $2: output file format extension (e.g., yyy)
+# usage: batch-convert xxx yyy
+batch-convert() {
+	for i in *."$1"; do
+		ffmpeg -i "$i" "${i%.$1}.$2"
+	done
+}
+
+# emails
+# filter unique email addresses out of a text file
+# usage: emails filename.txt
+emails() {
+	grep -o '[[:alnum:]+\.\_\-]*@[[:alnum:]+\.\_\-]*' "$1" | sort | uniq -i
+}
+
+# plcat
+# read the standard XML version of a plist
+# $1: path to the plist file to read
+# usage: plcat /path/to/foo.plist
+plcat() {
+	plutil -convert xml1 -o - "$1"
+}
+
+# ssh-proxy
+# open a SOCKS tunnel on the specified port over SSH to the specified server
+# $1: port to use
+# $2: server to use
+# usage: ssh-proxy 1234 1.2.3.4
+ssh-proxy() {
+	ssh -D "$1" -f -C -q -N "$2"
+	local proxyPID=$(pgrep -n ssh)
+	networksetup -setsocksfirewallproxy "Wi-Fi" localhost "$1"
+
+	echo "Proxy now open on port $1 to $2"
+	echo "Process ID: $proxyPID"
+	read -p "Press return to close the connection..."
+
+	networksetup -setsocksfirewallproxystate "Wi-Fi" off
+	kill "$proxyPID"
+
+	echo "Connection closed"
+}
