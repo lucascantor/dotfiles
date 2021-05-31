@@ -46,4 +46,4 @@ alias mv='mv -iv'
 alias mkdir='mkdir -pv'
 alias ls='ls -FGlAhp ${colorflag}'
 alias less='less -FSRXc'
-cd() { builtin cd "$@"; ls; }
+cd() { builtin cd "$@"; git pull 2>/dev/null; ls; }
