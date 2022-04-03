@@ -11,9 +11,6 @@ plugins=(git)
 # Source Oh My Zsh
 source $ZSH/oh-my-zsh.sh
 
-# Set colors for LS_COLORS
-eval `dircolors ~/.dircolors`
-
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`
 # * ~/.extra can be used for other settings you don’t want to commit
