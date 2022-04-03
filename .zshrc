@@ -23,3 +23,7 @@ unset file;
 if type _git &> /dev/null; then
 	complete -o default -o nospace -F _git g;
 fi;
+
+# Enable tab completion for Terraform
+autoload -U +X bashcompinit && bashcompinit
+complete -o nospace -C /usr/local/bin/terraform terraform
