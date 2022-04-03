@@ -20,7 +20,13 @@ echo "Creating symlinks..."
 create_symlinks
 
 echo "Setting up Oh My Zsh Spaceship theme..."
-sudo apt-get install powerline fonts-powerline -y
+sudo apt-get update && sudo apt-get install powerline fonts-powerline -y
 ZSH_CUSTOM="$HOME/.oh-my-zsh/custom"
 git clone https://github.com/spaceship-prompt/spaceship-prompt.git "$ZSH_CUSTOM/themes/spaceship-prompt" --depth=1
 ln -s "$ZSH_CUSTOM/themes/spaceship-prompt/spaceship.zsh-theme" "$ZSH_CUSTOM/themes/spaceship.zsh-theme"
+
+echo "Setting up Terraform..."
+sudo apt-get update && sudo apt-get install -y gnupg software-properties-common curl
+curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+sudo apt-get update && sudo apt-get install terraform -y
