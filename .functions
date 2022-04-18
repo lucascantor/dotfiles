@@ -52,3 +52,23 @@ clean-ds() {
 emails() {
 	grep -o '[[:alnum:]+\.\_\-]*@[[:alnum:]+\.\_\-]*' "$1" | sort | uniq -i
 }
+
+# gps
+# shortcut function for "safe" operation of gpsup alias in oh my zsh git plugin
+# docs: https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/git
+#
+# prevents pushing to common protected branches
+# usage: gp
+gps() {
+	proteted_branches=(main master)
+	current_branch=$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')
+
+	if [[ ${proteted_branches[(ie)$current_branch]} -le ${#proteted_branches} ]]; then
+		echo ""
+		echo "WARNING: $current_branch is probably protected"
+		echo "Aborting git push operation..."
+		echo ""
+	else
+	    gpsup
+	fi
+}
