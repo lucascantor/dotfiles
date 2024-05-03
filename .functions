@@ -1,5 +1,10 @@
 #!/usr/bin/env zsh
 
+# cd
+# ls automatically after cd
+# usage: cd /path/to/directory
+cd() { builtin cd "$@"; ls; }
+
 # mkzip
 # create a ZIP archive of a directory
 # usage: mkzip directory-name-here
