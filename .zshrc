@@ -27,3 +27,6 @@ fi;
 # Enable tab completion for Terraform
 autoload -U +X bashcompinit && bashcompinit
 complete -o nospace -C /usr/bin/terraform terraform
+
+# Add ~/.tfenv/bin to $PATH
+export PATH="$HOME/.tfenv/bin:$PATH"
