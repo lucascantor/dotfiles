@@ -27,4 +27,3 @@ ln -s "$ZSH_CUSTOM/themes/spaceship-prompt/spaceship.zsh-theme" "$ZSH_CUSTOM/the
 
 echo "Setting up Terraform..."
 git clone https://github.com/tfutils/tfenv.git ~/.tfenv --depth=1
-echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> ~/.zprofile
