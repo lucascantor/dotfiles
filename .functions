@@ -71,8 +71,13 @@ gps() {
 	if [[ ${proteted_branches[(ie)$current_branch]} -le ${#proteted_branches} ]]; then
 		echo ""
 		echo "WARNING: $current_branch is probably protected"
-		echo "Aborting git push operation..."
-		echo ""
+		if read -q "response?Proceed anyway? (y/n) "; then
+			gpsup
+		else
+			echo ""
+			echo "Aborting git push operation..."
+			echo ""
+		fi
 	else
 	    gpsup
 	fi
