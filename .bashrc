@@ -1,4 +1,7 @@
-#!/usr/bin/bash		
+#!/usr/bin/bash
 
-/usr/bin/clear		
-/usr/bin/zsh
+# Fallback for environments where `chsh -s zsh` isn't possible: hand off interactive bash to zsh.
+if [ -t 0 ] && command -v zsh > /dev/null 2>&1; then
+	clear
+	exec zsh
+fi
