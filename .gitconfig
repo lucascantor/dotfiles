@@ -189,6 +189,16 @@
 
 	insteadOf = "gist:"
 
+[url "git@codeberg.org:"]
+
+	insteadOf = "cb:"
+	pushInsteadOf = "codeberg:"
+	pushInsteadOf = "https://codeberg.org/"
+
+[url "https://codeberg.org/"]
+
+	insteadOf = "codeberg:"
+
 [init]
 
 	templateDir = ~/.config/git/template/
