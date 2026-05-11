@@ -249,6 +249,67 @@ do_tfenv() {
 	brew install tfenv
 }
 
+# -------- Font: Maple Mono NF --------
+
+FONT_LINUX_RELEASE_API="https://api.github.com/repos/subframe7536/maple-font/releases/latest"
+FONT_LINUX_INSTALL_DIR="$HOME/.local/share/fonts/MapleMonoNF"
+
+brew_cask_installed() {
+	brew list --cask "$1" > /dev/null 2>&1
+}
+
+font_linux_installed() {
+	command -v fc-list > /dev/null 2>&1 && fc-list 2>/dev/null | grep -qi 'Maple Mono NF'
+}
+
+plan_font() {
+	case "$OS" in
+		macos)
+			if brew_cask_installed font-maple-mono-nf; then
+				planned_action "Packages" "do_font" "brew install --cask font-maple-mono-nf" "skip: already present"
+			else
+				planned_action "Packages" "do_font" "brew install --cask font-maple-mono-nf"
+			fi
+			;;
+		linux)
+			if font_linux_installed; then
+				planned_action "Packages" "do_font" "Install Maple Mono NF from github.com/subframe7536/maple-font releases" "skip: already present"
+			else
+				planned_action "Packages" "do_font" "Install Maple Mono NF from github.com/subframe7536/maple-font releases into $FONT_LINUX_INSTALL_DIR"
+			fi
+			;;
+	esac
+}
+
+do_font() {
+	case "$OS" in
+		macos)
+			if brew_cask_installed font-maple-mono-nf; then return 0; fi
+			brew install --cask font-maple-mono-nf
+			;;
+		linux)
+			if font_linux_installed; then return 0; fi
+			mkdir -p "$FONT_LINUX_INSTALL_DIR"
+			local asset_url
+			asset_url=$(curl -fsSL "$FONT_LINUX_RELEASE_API" \
+				| grep -E '"browser_download_url".*MapleMono-NF.*\.zip"' \
+				| head -1 \
+				| sed -E 's/.*"(https[^"]+)".*/\1/')
+			if [ -z "$asset_url" ]; then
+				echo "Could not find Maple Mono NF zip in latest release" >&2
+				return 1
+			fi
+			local tmpdir
+			tmpdir=$(mktemp -d)
+			# shellcheck disable=SC2064
+			trap "rm -rf '$tmpdir'" RETURN
+			curl -fsSL "$asset_url" -o "$tmpdir/MapleMono-NF.zip"
+			unzip -q "$tmpdir/MapleMono-NF.zip" -d "$FONT_LINUX_INSTALL_DIR"
+			fc-cache -fv "$FONT_LINUX_INSTALL_DIR" > /dev/null
+			;;
+	esac
+}
+
 # -------- Plan registration (filled in by subsequent tasks) --------
 
 register_plan() {
@@ -256,6 +317,7 @@ register_plan() {
 	plan_zsh
 	plan_spaceship
 	plan_tfenv
+	plan_font
 }
 
 # -------- Main --------
