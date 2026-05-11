@@ -421,6 +421,79 @@ do_symlink_aliases()   { do_symlink_one .aliases; }
 do_symlink_functions() { do_symlink_one .functions; }
 do_symlink_gitignore() { do_symlink_one .gitignore; }
 
+# -------- Config --------
+
+GITCONFIG_INCLUDE="$REPO_DIR/.gitconfig"
+EXTRA_FILE="$HOME/.extra"
+SPACESHIP_THEME_LINK="$HOME/.oh-my-zsh/custom/themes/spaceship.zsh-theme"
+
+plan_gitconfig_include() {
+	if git config --global --get-all include.path 2>/dev/null | grep -qxF "$GITCONFIG_INCLUDE"; then
+		planned_action "Config" "do_gitconfig_include" "git config --global --add include.path $GITCONFIG_INCLUDE" "skip: already included"
+	else
+		planned_action "Config" "do_gitconfig_include" "git config --global --add include.path $GITCONFIG_INCLUDE"
+	fi
+}
+
+do_gitconfig_include() {
+	if git config --global --get-all include.path 2>/dev/null | grep -qxF "$GITCONFIG_INCLUDE"; then
+		return 0
+	fi
+	git config --global --add include.path "$GITCONFIG_INCLUDE"
+}
+
+plan_extra_file() {
+	# Only relevant on macOS (the Secretive SSH agent socket is macOS-specific).
+	if [ "$OS" != "macos" ]; then return 0; fi
+	if [ -f "$EXTRA_FILE" ]; then
+		planned_action "Config" "do_extra_file" "Write $EXTRA_FILE with SSH_AUTH_SOCK + PATH=~/.local/bin" "skip: $EXTRA_FILE already exists"
+	else
+		planned_action "Config" "do_extra_file" "Write $EXTRA_FILE with SSH_AUTH_SOCK + PATH=~/.local/bin" "new"
+	fi
+}
+
+do_extra_file() {
+	[ "$OS" = "macos" ] || return 0
+	[ -f "$EXTRA_FILE" ] && return 0
+	cat > "$EXTRA_FILE" <<'EOF'
+# Secretive Agent
+export SSH_AUTH_SOCK="$HOME/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh"
+export PATH="$HOME/.local/bin:$PATH"
+EOF
+}
+
+plan_spaceship_theme_link() {
+	local target
+	target="$(brew_prefix)/opt/spaceship/spaceship.zsh-theme"
+	if [ -L "$SPACESHIP_THEME_LINK" ] && [ "$(readlink "$SPACESHIP_THEME_LINK")" = "$target" ]; then
+		planned_action "Symlinks" "do_spaceship_theme_link" "ln -sfn $target $SPACESHIP_THEME_LINK" "skip: already linked"
+	else
+		planned_action "Symlinks" "do_spaceship_theme_link" "ln -sfn $target $SPACESHIP_THEME_LINK"
+	fi
+}
+
+do_spaceship_theme_link() {
+	local target
+	target="$(brew_prefix)/opt/spaceship/spaceship.zsh-theme"
+	mkdir -p "$(dirname "$SPACESHIP_THEME_LINK")"
+	ln -sfn "$target" "$SPACESHIP_THEME_LINK"
+}
+
+plan_linux_brew_shellenv() {
+	[ "$OS" = "linux" ] || return 0
+	if [ -f "$HOME/.zprofile" ] && grep -q 'brew shellenv' "$HOME/.zprofile"; then
+		planned_action "Config" "do_linux_brew_shellenv" "Append brew shellenv to ~/.zprofile" "skip: already present"
+	else
+		planned_action "Config" "do_linux_brew_shellenv" "Append 'eval \"\$($(brew_prefix)/bin/brew shellenv)\"' to ~/.zprofile"
+	fi
+}
+
+do_linux_brew_shellenv() {
+	[ "$OS" = "linux" ] || return 0
+	if [ -f "$HOME/.zprofile" ] && grep -q 'brew shellenv' "$HOME/.zprofile"; then return 0; fi
+	echo "eval \"\$($(brew_prefix)/bin/brew shellenv)\"" >> "$HOME/.zprofile"
+}
+
 # -------- Plan registration (filled in by subsequent tasks) --------
 
 register_plan() {
@@ -431,6 +504,10 @@ register_plan() {
 	plan_font
 	plan_omz
 	plan_symlinks
+	plan_spaceship_theme_link
+	plan_gitconfig_include
+	plan_extra_file
+	plan_linux_brew_shellenv
 }
 
 # -------- Main --------
