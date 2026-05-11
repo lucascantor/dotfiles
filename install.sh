@@ -335,11 +335,27 @@ sym_fn_name() {
 	echo "do_symlink_$n"
 }
 
+canonicalize_path() {
+	# Echo the on-disk-canonical (case-resolved) form of the path.
+	# Works on case-insensitive macOS and case-sensitive Linux alike.
+	# If the path doesn't exist, echo the input unchanged so plan-phase
+	# comparisons for absent dotfiles don't error out.
+	local p="$1"
+	if [ -e "$p" ] || [ -L "$p" ]; then
+		local d b
+		d=$(cd "$(dirname "$p")" 2>/dev/null && /bin/pwd -P) || { echo "$p"; return; }
+		b=$(basename "$p")
+		echo "$d/$b"
+	else
+		echo "$p"
+	fi
+}
+
 dotfile_state() {
 	# Echoes one of: ok, absent, identical, differing, symlink_other
 	local src="$1" dst="$2"
 	if [ -L "$dst" ]; then
-		if [ "$(readlink "$dst")" = "$src" ]; then
+		if [ "$(canonicalize_path "$(readlink "$dst")")" = "$(canonicalize_path "$src")" ]; then
 			echo ok
 		else
 			echo symlink_other
@@ -425,8 +441,23 @@ GITCONFIG_INCLUDE="$REPO_DIR/.gitconfig"
 EXTRA_FILE="$HOME/.extra"
 SPACESHIP_THEME_LINK="$HOME/.oh-my-zsh/custom/themes/spaceship.zsh-theme"
 
+gitconfig_include_present() {
+	# True iff any include.path entry canonicalizes to the same path as
+	# $GITCONFIG_INCLUDE. Plain string compare (e.g. grep -qxF) misses
+	# entries that differ only in case on case-insensitive filesystems.
+	local target_canon existing
+	target_canon=$(canonicalize_path "$GITCONFIG_INCLUDE")
+	while IFS= read -r existing; do
+		[ -z "$existing" ] && continue
+		if [ "$(canonicalize_path "$existing")" = "$target_canon" ]; then
+			return 0
+		fi
+	done < <(git config --global --get-all include.path 2>/dev/null || true)
+	return 1
+}
+
 plan_gitconfig_include() {
-	if git config --global --get-all include.path 2>/dev/null | grep -qxF "$GITCONFIG_INCLUDE"; then
+	if gitconfig_include_present; then
 		planned_action "Config" "do_gitconfig_include" "git config --global --add include.path $GITCONFIG_INCLUDE" "skip: already included"
 	else
 		planned_action "Config" "do_gitconfig_include" "git config --global --add include.path $GITCONFIG_INCLUDE"
@@ -434,7 +465,7 @@ plan_gitconfig_include() {
 }
 
 do_gitconfig_include() {
-	if git config --global --get-all include.path 2>/dev/null | grep -qxF "$GITCONFIG_INCLUDE"; then
+	if gitconfig_include_present; then
 		return 0
 	fi
 	git config --global --add include.path "$GITCONFIG_INCLUDE"
@@ -463,7 +494,7 @@ EOF
 plan_spaceship_theme_link() {
 	local target
 	target="$(brew_prefix)/opt/spaceship/spaceship.zsh-theme"
-	if [ -L "$SPACESHIP_THEME_LINK" ] && [ "$(readlink "$SPACESHIP_THEME_LINK")" = "$target" ]; then
+	if [ -L "$SPACESHIP_THEME_LINK" ] && [ "$(canonicalize_path "$(readlink "$SPACESHIP_THEME_LINK")")" = "$(canonicalize_path "$target")" ]; then
 		planned_action "Symlinks" "do_spaceship_theme_link" "ln -sfn $target $SPACESHIP_THEME_LINK" "skip: already linked"
 	else
 		planned_action "Symlinks" "do_spaceship_theme_link" "ln -sfn $target $SPACESHIP_THEME_LINK"
