@@ -292,7 +292,7 @@ do_font() {
 			mkdir -p "$FONT_LINUX_INSTALL_DIR"
 			local asset_url
 			asset_url=$(curl -fsSL "$FONT_LINUX_RELEASE_API" \
-				| grep -E '"browser_download_url".*MapleMono-NF.*\.zip"' \
+				| grep -E '"browser_download_url".*MapleMono-NF\.zip"' \
 				| head -1 \
 				| sed -E 's/.*"(https[^"]+)".*/\1/')
 			if [ -z "$asset_url" ]; then
@@ -305,9 +305,26 @@ do_font() {
 			trap "rm -rf '$tmpdir'" RETURN
 			curl -fsSL "$asset_url" -o "$tmpdir/MapleMono-NF.zip"
 			unzip -q "$tmpdir/MapleMono-NF.zip" -d "$FONT_LINUX_INSTALL_DIR"
-			fc-cache -fv "$FONT_LINUX_INSTALL_DIR" > /dev/null
+			fc-cache -f "$FONT_LINUX_INSTALL_DIR" > /dev/null
 			;;
 	esac
+}
+
+# -------- Oh My Zsh (no brew formula available) --------
+
+OMZ_INSTALL_URL="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
+
+plan_omz() {
+	if [ -d "$HOME/.oh-my-zsh" ]; then
+		planned_action "Curl installs (no brew formula available)" "do_omz" "Install Oh My Zsh" "skip: $HOME/.oh-my-zsh already present"
+	else
+		planned_action "Curl installs (no brew formula available)" "do_omz" "Install Oh My Zsh (curl-install from $OMZ_INSTALL_URL)"
+	fi
+}
+
+do_omz() {
+	if [ -d "$HOME/.oh-my-zsh" ]; then return 0; fi
+	RUNZSH=no CHSH=no sh -c "$(curl -fsSL "$OMZ_INSTALL_URL")" "" --unattended
 }
 
 # -------- Plan registration (filled in by subsequent tasks) --------
@@ -318,6 +335,7 @@ register_plan() {
 	plan_spaceship
 	plan_tfenv
 	plan_font
+	plan_omz
 }
 
 # -------- Main --------
