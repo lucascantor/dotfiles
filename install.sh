@@ -94,8 +94,11 @@ execute_plan() {
 		rest="${rest#*|}"
 		local desc="${rest%%|*}"
 		local status="${rest#*|}"
-		# Skips are no-ops at execute time. The fn is still called but is
-		# expected to short-circuit when its detection says "already done".
+		# Entries whose status starts with "skip:" are documented no-ops.
+		# Skip them outright so execution output doesn't contradict the plan.
+		if [[ "$status" == skip:* ]]; then
+			continue
+		fi
 		echo "→ $desc"
 		"$fn"
 	done
@@ -112,10 +115,54 @@ prompt_or_proceed() {
 	esac
 }
 
+# -------- Homebrew --------
+
+BREW_INSTALL_URL="https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+
+brew_prefix() {
+	# Best-guess brew prefix for the current OS/arch. Used in plan text;
+	# do_* functions re-resolve via `brew --prefix` after install.
+	if command -v brew > /dev/null 2>&1; then
+		brew --prefix
+		return
+	fi
+	case "$OS" in
+		macos)
+			if [ "$ARCH" = "arm64" ]; then
+				echo "/opt/homebrew"
+			else
+				echo "/usr/local"
+			fi
+			;;
+		linux) echo "/home/linuxbrew/.linuxbrew" ;;
+	esac
+}
+
+plan_homebrew() {
+	if command -v brew > /dev/null 2>&1; then
+		planned_action "Packages" "do_homebrew" "Install Homebrew" "skip: already present at $(brew --prefix)"
+	else
+		planned_action "Packages" "do_homebrew" "Install Homebrew (curl-install from $BREW_INSTALL_URL)"
+	fi
+}
+
+do_homebrew() {
+	if command -v brew > /dev/null 2>&1; then
+		return 0
+	fi
+	NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL "$BREW_INSTALL_URL")"
+	# After install, expose brew in this shell so subsequent steps can use it.
+	local prefix
+	prefix=$(brew_prefix)
+	if [ -x "$prefix/bin/brew" ]; then
+		eval "$("$prefix/bin/brew" shellenv)"
+	fi
+}
+
 # -------- Plan registration (filled in by subsequent tasks) --------
 
 register_plan() {
-	: # Tasks 4-10 plug in plan_* calls here.
+	plan_homebrew
 }
 
 # -------- Main --------
