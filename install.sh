@@ -494,9 +494,58 @@ do_linux_brew_shellenv() {
 	echo "eval \"\$($(brew_prefix)/bin/brew shellenv)\"" >> "$HOME/.zprofile"
 }
 
+# -------- Linux prereqs --------
+
+LINUX_APT_PACKAGES=(curl git build-essential procps file zsh unzip)
+
+apt_package_installed() {
+	dpkg -s "$1" > /dev/null 2>&1
+}
+
+plan_linux_prereqs() {
+	[ "$OS" = "linux" ] || return 0
+	local missing=()
+	for p in "${LINUX_APT_PACKAGES[@]}"; do
+		if ! apt_package_installed "$p"; then
+			missing+=("$p")
+		fi
+	done
+	if [ "${#missing[@]}" -eq 0 ]; then
+		planned_action "Packages" "do_linux_prereqs" "sudo apt-get install ${LINUX_APT_PACKAGES[*]}" "skip: all present"
+	else
+		planned_action "Packages" "do_linux_prereqs" "sudo apt-get install ${missing[*]}"
+	fi
+}
+
+do_linux_prereqs() {
+	[ "$OS" = "linux" ] || return 0
+	local missing=()
+	for p in "${LINUX_APT_PACKAGES[@]}"; do
+		if ! apt_package_installed "$p"; then
+			missing+=("$p")
+		fi
+	done
+	if [ "${#missing[@]}" -eq 0 ]; then return 0; fi
+	sudo apt-get update
+	sudo apt-get install -y "${missing[@]}"
+}
+
+# -------- Post-install hint --------
+
+print_chsh_hint() {
+	local zsh_path
+	zsh_path=$(command -v zsh || true)
+	if [ -n "$zsh_path" ] && [ "${SHELL:-}" != "$zsh_path" ]; then
+		echo
+		echo "To finish setup, change your login shell to zsh:"
+		echo "  chsh -s \"$zsh_path\""
+	fi
+}
+
 # -------- Plan registration (filled in by subsequent tasks) --------
 
 register_plan() {
+	plan_linux_prereqs    # must come before plan_homebrew on Linux
 	plan_homebrew
 	plan_zsh
 	plan_spaceship
@@ -526,6 +575,7 @@ main() {
 	execute_plan
 	echo
 	echo "Done."
+	print_chsh_hint
 }
 
 main "$@"
