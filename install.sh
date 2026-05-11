@@ -159,10 +159,103 @@ do_homebrew() {
 	fi
 }
 
+# -------- Brew packages --------
+
+brew_formula_installed() {
+	brew list --formula "$1" > /dev/null 2>&1
+}
+
+plan_brew_formula() {
+	# Args: formula_name, do_function_name
+	local name="$1" fn="$2"
+	if brew_formula_installed "$name"; then
+		planned_action "Packages" "$fn" "brew install $name" "skip: already present"
+	else
+		planned_action "Packages" "$fn" "brew install $name"
+	fi
+}
+
+plan_zsh() {
+	# On macOS the system zsh is always present and is the canonical login shell;
+	# we don't install brew's zsh unless the system one is unexpectedly missing.
+	if [ "$OS" = "macos" ]; then
+		if command -v zsh > /dev/null 2>&1; then
+			planned_action "Packages" "do_zsh" "Install zsh" "skip: already present at $(command -v zsh)"
+		else
+			planned_action "Packages" "do_zsh" "brew install zsh"
+		fi
+	else
+		# Linux: zsh is installed via apt in plan_linux_prereqs (Task 10),
+		# because it needs to be in /etc/shells. Nothing to do here.
+		return 0
+	fi
+}
+
+do_zsh() {
+	if command -v zsh > /dev/null 2>&1; then return 0; fi
+	brew install zsh
+}
+
+plan_spaceship() {
+	# Detect pre-existing manual git clone install.
+	local manual="$HOME/.oh-my-zsh/custom/themes/spaceship-prompt"
+	if [ -d "$manual" ]; then
+		if [ "$MIGRATE" -eq 1 ]; then
+			planned_action "Packages" "do_spaceship" "brew install spaceship" "migrate: remove $manual git clone first"
+		else
+			planned_action "Packages" "do_spaceship" "brew install spaceship" "skip: manual install present (re-run with --migrate to replace)"
+		fi
+		return
+	fi
+	plan_brew_formula spaceship do_spaceship
+}
+
+do_spaceship() {
+	local manual="$HOME/.oh-my-zsh/custom/themes/spaceship-prompt"
+	if [ -d "$manual" ]; then
+		if [ "$MIGRATE" -eq 1 ]; then
+			rm -rf "$manual"
+		else
+			return 0  # plan said skip; respect it
+		fi
+	fi
+	if brew_formula_installed spaceship; then return 0; fi
+	brew install spaceship
+}
+
+plan_tfenv() {
+	local manual="$HOME/.tfenv"
+	if [ -d "$manual/.git" ]; then
+		if [ "$MIGRATE" -eq 1 ]; then
+			planned_action "Packages" "do_tfenv" "brew install tfenv" "migrate: remove $manual git clone first"
+		else
+			planned_action "Packages" "do_tfenv" "brew install tfenv" "skip: manual install present (re-run with --migrate to replace)"
+		fi
+		return
+	fi
+	plan_brew_formula tfenv do_tfenv
+}
+
+do_tfenv() {
+	local manual="$HOME/.tfenv"
+	if [ -d "$manual/.git" ]; then
+		if [ "$MIGRATE" -eq 1 ]; then
+			rm -rf "$manual"
+		else
+			return 0
+		fi
+	fi
+	if brew_formula_installed tfenv; then return 0; fi
+	brew install tfenv
+}
+
 # -------- Plan registration (filled in by subsequent tasks) --------
 
 register_plan() {
 	plan_homebrew
+	plan_zsh
+	plan_spaceship
+	plan_tfenv
 }
 
 # -------- Main --------
