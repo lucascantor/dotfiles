@@ -327,6 +327,100 @@ do_omz() {
 	RUNZSH=no CHSH=no sh -c "$(curl -fsSL "$OMZ_INSTALL_URL")" "" --unattended
 }
 
+# -------- Dotfile symlinks --------
+
+SYMLINK_FILES=(.zshrc .aliases .functions .gitignore)
+
+sym_fn_name() {
+	# Map ".zshrc" -> "do_symlink_zshrc" (bash function names can't start with a dot)
+	local n="${1#.}"
+	echo "do_symlink_$n"
+}
+
+dotfile_state() {
+	# Echoes one of: ok, absent, identical, differing, symlink_other
+	local src="$1" dst="$2"
+	if [ -L "$dst" ]; then
+		if [ "$(readlink "$dst")" = "$src" ]; then
+			echo ok
+		else
+			echo symlink_other
+		fi
+	elif [ ! -e "$dst" ]; then
+		echo absent
+	elif cmp -s "$src" "$dst"; then
+		echo identical
+	else
+		echo differing
+	fi
+}
+
+plan_symlinks() {
+	for name in "${SYMLINK_FILES[@]}"; do
+		local src="$REPO_DIR/$name"
+		local dst="$HOME/$name"
+		local fn
+		fn=$(sym_fn_name "$name")
+		local state
+		state=$(dotfile_state "$src" "$dst")
+		case "$state" in
+			ok)
+				planned_action "Symlinks" "$fn" "ln -sfn $src $dst" "skip: already linked"
+				;;
+			absent)
+				planned_action "Symlinks" "$fn" "ln -sfn $src $dst" "new"
+				;;
+			identical)
+				planned_action "Symlinks" "$fn" "ln -sfn $src $dst" "convert: regular file, identical content"
+				;;
+			differing)
+				if [ "$MIGRATE" -eq 1 ]; then
+					planned_action "Symlinks" "$fn" "ln -sfn $src $dst" "migrate: back up $dst then replace"
+				else
+					planned_action "Symlinks" "$fn" "ln -sfn $src $dst" "skip: local edits present (re-run with --migrate)"
+				fi
+				;;
+			symlink_other)
+				if [ "$MIGRATE" -eq 1 ]; then
+					planned_action "Symlinks" "$fn" "ln -sfn $src $dst" "migrate: replace symlink currently pointing at $(readlink "$dst")"
+				else
+					planned_action "Symlinks" "$fn" "ln -sfn $src $dst" "skip: symlink points elsewhere (re-run with --migrate)"
+				fi
+				;;
+		esac
+	done
+}
+
+do_symlink_one() {
+	local name="$1"
+	local src="$REPO_DIR/$name"
+	local dst="$HOME/$name"
+	local state
+	state=$(dotfile_state "$src" "$dst")
+	case "$state" in
+		ok) return 0 ;;
+		absent|identical)
+			ln -sfn "$src" "$dst"
+			;;
+		differing|symlink_other)
+			if [ "$MIGRATE" -ne 1 ]; then return 0; fi
+			if [ -L "$dst" ]; then
+				rm "$dst"
+			else
+				local ts
+				ts=$(date +%Y%m%d-%H%M%S)
+				mv "$dst" "$dst.bak.$ts"
+			fi
+			ln -sfn "$src" "$dst"
+			;;
+	esac
+}
+
+do_symlink_zshrc()     { do_symlink_one .zshrc; }
+do_symlink_aliases()   { do_symlink_one .aliases; }
+do_symlink_functions() { do_symlink_one .functions; }
+do_symlink_gitignore() { do_symlink_one .gitignore; }
+
 # -------- Plan registration (filled in by subsequent tasks) --------
 
 register_plan() {
@@ -336,6 +430,7 @@ register_plan() {
 	plan_tfenv
 	plan_font
 	plan_omz
+	plan_symlinks
 }
 
 # -------- Main --------
