@@ -2,13 +2,12 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-# shellcheck disable=SC2034
+
 REPO_DIR="$SCRIPT_DIR"
 
 # -------- Flags --------
 DRY_RUN=0
 ASSUME_YES=0
-# shellcheck disable=SC2034
 MIGRATE=0
 
 usage() {
@@ -26,7 +25,6 @@ Flags are independent and can be combined. --dry-run overrides --yes.
 EOF
 }
 
-# shellcheck disable=SC2034
 while [ $# -gt 0 ]; do
 	case "$1" in
 		--dry-run) DRY_RUN=1 ;;
@@ -294,7 +292,7 @@ do_font() {
 			asset_url=$(curl -fsSL "$FONT_LINUX_RELEASE_API" \
 				| grep -E '"browser_download_url".*MapleMono-NF\.zip"' \
 				| head -1 \
-				| sed -E 's/.*"(https[^"]+)".*/\1/')
+				| sed -E 's/.*"(https[^"]+)".*/\1/' || true)
 			if [ -z "$asset_url" ]; then
 				echo "Could not find Maple Mono NF zip in latest release" >&2
 				return 1

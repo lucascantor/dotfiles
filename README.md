@@ -41,7 +41,7 @@ chsh -s "$(command -v zsh)"
 For PATH additions or other settings that shouldn't live in this repo, drop them in:
 
 - `~/.path` — `PATH` additions
-- `~/.extra` — anything else you don't want to commit
+- `~/.extra` — anything else you don't want to commit (on macOS, the installer seeds this with a Secretive SSH agent socket export and `~/.local/bin` on `PATH`; it will never overwrite an existing `~/.extra`)
 
 Both are sourced by `.zshrc` if present.
 
