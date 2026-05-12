@@ -302,7 +302,7 @@ do_font() {
 			# shellcheck disable=SC2064
 			trap "rm -rf '$tmpdir'" RETURN
 			curl -fsSL "$asset_url" -o "$tmpdir/MapleMono-NF.zip"
-			unzip -q "$tmpdir/MapleMono-NF.zip" -d "$FONT_LINUX_INSTALL_DIR"
+			unzip -oq "$tmpdir/MapleMono-NF.zip" -d "$FONT_LINUX_INSTALL_DIR"
 			fc-cache -f "$FONT_LINUX_INSTALL_DIR" > /dev/null
 			;;
 	esac
@@ -593,13 +593,18 @@ do_linuxbrew_prefix() {
 # -------- Post-install hint --------
 
 print_chsh_hint() {
+	# Login shell already zsh? Match any path (/usr/bin/zsh, /bin/zsh, brew's).
+	# Comparing $SHELL to `command -v zsh` is fragile because post-install PATH
+	# may resolve to brew's zsh while the actual login shell is /usr/bin/zsh.
+	case "${SHELL:-}" in
+		*/zsh) return 0 ;;
+	esac
 	local zsh_path
 	zsh_path=$(command -v zsh || true)
-	if [ -n "$zsh_path" ] && [ "${SHELL:-}" != "$zsh_path" ]; then
-		echo
-		echo "To finish setup, change your login shell to zsh:"
-		echo "  chsh -s \"$zsh_path\""
-	fi
+	[ -n "$zsh_path" ] || return 0
+	echo
+	echo "To finish setup, change your login shell to zsh:"
+	echo "  chsh -s \"$zsh_path\""
 }
 
 # -------- Plan registration (filled in by subsequent tasks) --------
