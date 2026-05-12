@@ -509,18 +509,20 @@ do_spaceship_theme_link() {
 }
 
 plan_linux_brew_shellenv() {
+	# Target .zshenv (not .zprofile) so brew is on PATH for non-login zsh too
+	# (tmux panes, nested shells). .zprofile only fires for login shells.
 	[ "$OS" = "linux" ] || return 0
-	if [ -f "$HOME/.zprofile" ] && grep -q 'brew shellenv' "$HOME/.zprofile"; then
-		planned_action "Config" "do_linux_brew_shellenv" "Append brew shellenv to ~/.zprofile" "skip: already present"
+	if [ -f "$HOME/.zshenv" ] && grep -q 'brew shellenv' "$HOME/.zshenv"; then
+		planned_action "Config" "do_linux_brew_shellenv" "Append brew shellenv to ~/.zshenv" "skip: already present"
 	else
-		planned_action "Config" "do_linux_brew_shellenv" "Append 'eval \"\$($(brew_prefix)/bin/brew shellenv)\"' to ~/.zprofile"
+		planned_action "Config" "do_linux_brew_shellenv" "Append 'eval \"\$($(brew_prefix)/bin/brew shellenv)\"' to ~/.zshenv"
 	fi
 }
 
 do_linux_brew_shellenv() {
 	[ "$OS" = "linux" ] || return 0
-	if [ -f "$HOME/.zprofile" ] && grep -q 'brew shellenv' "$HOME/.zprofile"; then return 0; fi
-	echo "eval \"\$($(brew_prefix)/bin/brew shellenv)\"" >> "$HOME/.zprofile"
+	if [ -f "$HOME/.zshenv" ] && grep -q 'brew shellenv' "$HOME/.zshenv"; then return 0; fi
+	echo "eval \"\$($(brew_prefix)/bin/brew shellenv)\"" >> "$HOME/.zshenv"
 }
 
 # -------- Linux prereqs --------
@@ -559,6 +561,35 @@ do_linux_prereqs() {
 	sudo apt-get install -y "${missing[@]}"
 }
 
+# -------- Linuxbrew prefix --------
+
+LINUXBREW_PREFIX_PARENT="/home/linuxbrew"
+LINUXBREW_PREFIX="/home/linuxbrew/.linuxbrew"
+
+plan_linuxbrew_prefix() {
+	# Unlike on macOS, the Linux brew installer does not sudo to create its
+	# prefix — it expects /home/linuxbrew/.linuxbrew to already exist and be
+	# user-writable, otherwise it aborts with "Insufficient permissions".
+	[ "$OS" = "linux" ] || return 0
+	if command -v brew > /dev/null 2>&1; then
+		planned_action "Packages" "do_linuxbrew_prefix" "Prepare $LINUXBREW_PREFIX for Homebrew" "skip: brew already installed"
+		return
+	fi
+	if [ -d "$LINUXBREW_PREFIX" ] && [ -O "$LINUXBREW_PREFIX_PARENT" ]; then
+		planned_action "Packages" "do_linuxbrew_prefix" "Prepare $LINUXBREW_PREFIX for Homebrew" "skip: $LINUXBREW_PREFIX_PARENT already owned by $(id -un)"
+		return
+	fi
+	planned_action "Packages" "do_linuxbrew_prefix" "sudo mkdir -p $LINUXBREW_PREFIX && sudo chown -R $(id -un):$(id -gn) $LINUXBREW_PREFIX_PARENT"
+}
+
+do_linuxbrew_prefix() {
+	[ "$OS" = "linux" ] || return 0
+	if command -v brew > /dev/null 2>&1; then return 0; fi
+	if [ -d "$LINUXBREW_PREFIX" ] && [ -O "$LINUXBREW_PREFIX_PARENT" ]; then return 0; fi
+	sudo mkdir -p "$LINUXBREW_PREFIX"
+	sudo chown -R "$(id -un):$(id -gn)" "$LINUXBREW_PREFIX_PARENT"
+}
+
 # -------- Post-install hint --------
 
 print_chsh_hint() {
@@ -574,7 +605,8 @@ print_chsh_hint() {
 # -------- Plan registration (filled in by subsequent tasks) --------
 
 register_plan() {
-	plan_linux_prereqs    # must come before plan_homebrew on Linux
+	plan_linux_prereqs       # must come before plan_homebrew on Linux
+	plan_linuxbrew_prefix    # must come between plan_linux_prereqs (sudo) and plan_homebrew (needs the prefix)
 	plan_homebrew
 	plan_zsh
 	plan_spaceship
