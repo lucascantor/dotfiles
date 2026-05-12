@@ -288,7 +288,10 @@ brew_cask_installed() {
 }
 
 font_linux_installed() {
-	command -v fc-list > /dev/null 2>&1 && fc-list 2>/dev/null | grep -qi 'Maple Mono NF'
+	# Note: `grep -q` short-circuits as soon as it matches, which SIGPIPEs the
+	# upstream fc-list — and under `set -o pipefail` that turns into a false
+	# negative. Drop -q and redirect instead so grep drains its input.
+	command -v fc-list > /dev/null 2>&1 && fc-list 2>/dev/null | grep -i 'Maple Mono NF' > /dev/null
 }
 
 plan_font() {
@@ -558,7 +561,7 @@ do_linux_brew_shellenv() {
 
 # -------- Linux prereqs --------
 
-LINUX_APT_PACKAGES=(curl git build-essential procps file zsh unzip)
+LINUX_APT_PACKAGES=(curl git build-essential procps file zsh unzip fontconfig)
 
 apt_package_installed() {
 	dpkg -s "$1" > /dev/null 2>&1
