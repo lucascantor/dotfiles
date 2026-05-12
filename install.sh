@@ -136,9 +136,34 @@ brew_prefix() {
 	esac
 }
 
+find_brew_bin() {
+	# Locate the brew binary. Checks $PATH first, then canonical install
+	# prefixes per OS — so that a brew installed but not yet exported into
+	# this script's PATH (e.g. ~/.zshenv not sourced) is still detected.
+	# Echoes the path on success, empty string on failure.
+	if command -v brew > /dev/null 2>&1; then
+		command -v brew
+		return
+	fi
+	case "$OS" in
+		macos)
+			[ -x "/opt/homebrew/bin/brew" ] && { echo "/opt/homebrew/bin/brew"; return; }
+			[ -x "/usr/local/bin/brew" ]    && { echo "/usr/local/bin/brew";    return; }
+			;;
+		linux)
+			[ -x "/home/linuxbrew/.linuxbrew/bin/brew" ] && { echo "/home/linuxbrew/.linuxbrew/bin/brew"; return; }
+			;;
+	esac
+}
+
 plan_homebrew() {
 	if command -v brew > /dev/null 2>&1; then
 		planned_action "Packages" "do_homebrew" "Install Homebrew" "skip: already present at $(brew --prefix)"
+	elif [ -n "$(find_brew_bin)" ]; then
+		# Installed at canonical path but absent from this script's PATH.
+		# do_homebrew will eval shellenv so subsequent brew calls work — not
+		# marked skip because the function still has work to do.
+		planned_action "Packages" "do_homebrew" "Expose Homebrew at $(brew_prefix) (already installed, not on PATH)"
 	else
 		planned_action "Packages" "do_homebrew" "Install Homebrew (curl-install from $BREW_INSTALL_URL)"
 	fi
@@ -146,6 +171,12 @@ plan_homebrew() {
 
 do_homebrew() {
 	if command -v brew > /dev/null 2>&1; then
+		return 0
+	fi
+	local bin
+	bin=$(find_brew_bin)
+	if [ -n "$bin" ]; then
+		eval "$("$bin" shellenv)"
 		return 0
 	fi
 	NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL "$BREW_INSTALL_URL")"
