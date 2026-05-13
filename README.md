@@ -1,6 +1,6 @@
 # dotfiles
 
-Shell defaults.
+Shell defaults to auto-configure on new systems.
 
 ## Requirements
 
