@@ -30,3 +30,6 @@ command -v terraform > /dev/null && complete -o nospace -C terraform terraform
 
 # Add ~/.tfenv/bin to $PATH
 export PATH="$HOME/.tfenv/bin:$PATH"
+
+# Add ~/.local/bin to $PATH (sfw and other user-local binaries)
+export PATH="$HOME/.local/bin:$PATH"

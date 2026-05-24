@@ -46,3 +46,18 @@ alias mv='mv -iv'
 alias mkdir='mkdir -pv'
 alias ls='ls -FGlAhp ${colorflag}'
 alias less='less -FSRXc'
+
+# Socket Firewall Free: wrap supported package managers so installs are
+# scanned for malicious packages before they hit disk. Aliases are gated on
+# sfw being present so they stay inert until install.sh sets it up, and
+# they're interactive-only — scripts and CI bypass them (CI should use
+# Socket's GitHub Action instead).
+# Supported ecosystems: https://docs.socket.dev/docs/socket-firewall-free
+if command -v sfw > /dev/null 2>&1; then
+	alias npm='sfw npm'
+	alias yarn='sfw yarn'
+	alias pnpm='sfw pnpm'
+	alias pip='sfw pip'
+	alias uv='sfw uv'
+	alias cargo='sfw cargo'
+fi

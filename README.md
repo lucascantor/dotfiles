@@ -26,6 +26,7 @@ cd ~/repos/dotfiles
 
 - bootstraps **Homebrew** if absent (and Linux build deps via `apt-get`)
 - installs **zsh** (via apt on Linux; uses system zsh on macOS), **Oh My Zsh** (official curl install — no Homebrew formula), **Spaceship prompt** (`brew install spaceship`), **tfenv** (`brew install tfenv`), and the **Maple Mono NF** font (Homebrew cask on macOS; GitHub release on Linux)
+- installs **[Socket Firewall Free](https://docs.socket.dev/docs/socket-firewall-free)** (`sfw`) into `~/.local/bin` from its GitHub release, and `.aliases` wraps `npm`, `yarn`, `pnpm`, `pip`, `uv`, and `cargo` to invoke it — so interactive package installs are scanned against Socket's threat feed before they hit disk
 - symlinks `.zshrc`, `.aliases`, `.functions`, and `.gitignore` from this repo into `$HOME`
 - layers this repo's `.gitconfig` into `~/.gitconfig` via git's `[include]` directive, so any existing identity or signing config is preserved
 - skips `.bashrc` so any local PATH additions there are preserved (the repo's `.bashrc` is a safe zsh-handoff trampoline you can opt into manually if `chsh` is unavailable)

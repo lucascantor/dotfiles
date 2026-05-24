@@ -342,6 +342,62 @@ do_font() {
 	esac
 }
 
+# -------- Socket Firewall Free (no brew formula available) --------
+
+# Socket Firewall Free: scans package installs against Socket's threat feed
+# before they hit disk. Distributed only as a Node module or a raw GitHub
+# release binary; we use the binary to avoid pulling Node in as a dependency.
+SFW_INSTALL_DIR="$HOME/.local/bin"
+SFW_BIN="$SFW_INSTALL_DIR/sfw"
+SFW_RELEASE_URL_BASE="https://github.com/SocketDev/sfw-free/releases/latest/download"
+
+sfw_asset_name() {
+	case "$OS:$ARCH" in
+		macos:arm64)   echo "sfw-free-macos-arm64" ;;
+		macos:x86_64)  echo "sfw-free-macos-x86_64" ;;
+		linux:x86_64)  echo "sfw-free-linux-x86_64" ;;
+		linux:aarch64) echo "sfw-free-linux-arm64" ;;
+		linux:arm64)   echo "sfw-free-linux-arm64" ;;
+		*) return 1 ;;
+	esac
+}
+
+sfw_installed() {
+	# Check the canonical install path rather than $PATH — the script may run
+	# before ~/.local/bin is wired in, so command -v sfw can miss it.
+	[ -x "$SFW_BIN" ] || command -v sfw > /dev/null 2>&1
+}
+
+plan_sfw() {
+	local asset
+	if ! asset=$(sfw_asset_name); then
+		planned_action "Curl installs (no brew formula available)" "do_sfw" "Install Socket Firewall Free (sfw)" "skip: unsupported arch $OS/$ARCH"
+		return
+	fi
+	if sfw_installed; then
+		planned_action "Curl installs (no brew formula available)" "do_sfw" "Install Socket Firewall Free (sfw) to $SFW_BIN" "skip: already present"
+	else
+		planned_action "Curl installs (no brew formula available)" "do_sfw" "Install Socket Firewall Free (sfw) to $SFW_BIN (curl-install from $SFW_RELEASE_URL_BASE/$asset)"
+	fi
+}
+
+do_sfw() {
+	if sfw_installed; then return 0; fi
+	local asset
+	asset=$(sfw_asset_name) || {
+		echo "sfw: unsupported architecture $OS/$ARCH" >&2
+		return 1
+	}
+	mkdir -p "$SFW_INSTALL_DIR"
+	curl -fsSL "$SFW_RELEASE_URL_BASE/$asset" -o "$SFW_BIN"
+	chmod +x "$SFW_BIN"
+	# macOS binaries from GitHub releases aren't notarized; strip the
+	# quarantine xattr so Gatekeeper doesn't block first launch.
+	if [ "$OS" = "macos" ]; then
+		xattr -dr com.apple.quarantine "$SFW_BIN" 2>/dev/null || true
+	fi
+}
+
 # -------- Oh My Zsh (no brew formula available) --------
 
 OMZ_INSTALL_URL="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
@@ -651,6 +707,7 @@ register_plan() {
 	plan_spaceship
 	plan_tfenv
 	plan_font
+	plan_sfw
 	plan_omz
 	plan_symlinks
 	plan_spaceship_theme_link
