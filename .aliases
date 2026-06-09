@@ -61,3 +61,11 @@ if command -v sfw > /dev/null 2>&1; then
 	alias uv='sfw uv'
 	alias cargo='sfw cargo'
 fi
+
+# Tailscale: the Mac App Store build keeps its CLI inside the app bundle
+# instead of on $PATH, so expose the standard `tailscale` command by pointing
+# at the bundled binary. Gated on the binary existing so this stays inert on
+# Linux and on Macs without the App Store app installed.
+if [ -x "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]; then
+	alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+fi
