@@ -1,3 +1,23 @@
+# Keep $PATH free of duplicates (first occurrence wins), so the prepends below
+# don't stack up entry after entry in nested shells.
+typeset -U path PATH
+
+# Homebrew
+# macOS's path_helper (run from /etc/zprofile) appends /etc/paths.d/homebrew
+# *after* the entries in /etc/paths, so /usr/bin lands ahead of
+# /opt/homebrew/bin and the system copies of openssl, python3 and pip3 shadow
+# Homebrew's. Re-prepend the prefix here to put Homebrew back in front.
+# `brew shellenv` prints nothing when the prefix is already leading $PATH, so
+# this stays idempotent in nested shells. Prefixes are probed in order:
+# Apple Silicon, Intel, Linuxbrew.
+for brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
+	if [ -x "$brew_bin" ]; then
+		eval "$("$brew_bin" shellenv)"
+		break
+	fi
+done
+unset brew_bin
+
 # Oh My Zsh
 export ZSH="${HOME}/.oh-my-zsh"
 
