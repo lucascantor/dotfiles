@@ -8,6 +8,11 @@
 [pull]
 	rebase = true
 
+[fetch]
+
+	# Drop remote-tracking refs for branches deleted on the remote (e.g. merged PRs)
+	prune = true
+
 [init]
 	defaultBranch = main
 
