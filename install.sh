@@ -417,7 +417,7 @@ do_omz() {
 
 # -------- Dotfile symlinks --------
 
-SYMLINK_FILES=(.zshrc .aliases .functions .gitignore)
+SYMLINK_FILES=(.zshrc .zprofile .aliases .functions .gitignore)
 
 sym_fn_name() {
 	# Map ".zshrc" -> "do_symlink_zshrc" (bash function names can't start with a dot)
@@ -521,6 +521,7 @@ do_symlink_one() {
 }
 
 do_symlink_zshrc()     { do_symlink_one .zshrc; }
+do_symlink_zprofile()  { do_symlink_one .zprofile; }
 do_symlink_aliases()   { do_symlink_one .aliases; }
 do_symlink_functions() { do_symlink_one .functions; }
 do_symlink_gitignore() { do_symlink_one .gitignore; }
