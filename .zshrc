@@ -31,6 +31,12 @@ plugins=(git)
 # Source Oh My Zsh
 source $ZSH/oh-my-zsh.sh
 
+# Spaceship: show the Google Cloud section (active config/project) in the
+# right prompt instead of the left. Must come after the theme is loaded, since
+# that's what populates the default SPACESHIP_PROMPT_ORDER.
+SPACESHIP_PROMPT_ORDER=(${SPACESHIP_PROMPT_ORDER:#gcloud})
+SPACESHIP_RPROMPT_ORDER=(gcloud)
+
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`
 # * ~/.extra can be used for other settings you don’t want to commit
@@ -53,3 +59,8 @@ export PATH="$HOME/.tfenv/bin:$PATH"
 
 # Add ~/.local/bin to $PATH (sfw and other user-local binaries)
 export PATH="$HOME/.local/bin:$PATH"
+
+# Add pyenv to $PATH
+export PYENV_ROOT="$HOME/.pyenv"
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init - zsh)"
